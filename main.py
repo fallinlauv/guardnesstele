@@ -56,11 +56,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         if param == "trade_guard":
             trade_guard_text = (
-                f"<i>Hi!</i> 👋 {user_name} untuk menggunakan Trade Guard silahkan hubungi admin di bawah ini\n\n"
+                f"<i>Hi!</i> ðŸ‘‹ {user_name} untuk menggunakan Trade Guard silahkan hubungi admin di bawah ini\n\n"
                 "@spcydick\n"
                 "@fallinlauvy\n\n"
                 "<blockquote>"
-                "🧢 | <b>Safety Steps</b> ✨\n"
+                "ðŸ§¢ | <b>Safety Steps</b> âœ¨\n"
                 "Pastikan sebelum transaksi menggunakan rekber untuk cek username admin di atas, dan berhati-hati lah terhadap akun palsu!"
                 "</blockquote>"
             )
@@ -70,7 +70,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         elif param == "report_scammer":
             context.user_data["awaiting_report"] = True
             report_scammer_text = (
-                f"<i>Hi!</i> 👋 {user_name} silakan kirimkan username pelaku beserta bukti foto/screenshot di bawah ini untuk kami tindak lanjuti segera."
+                f"<i>Hi!</i> ðŸ‘‹ {user_name} silakan kirimkan username pelaku beserta bukti foto/screenshot di bawah ini untuk kami tindak lanjuti segera."
             )
             await update.message.reply_text(report_scammer_text, parse_mode="HTML")
             return
@@ -115,11 +115,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             context.user_data["report_messages"] = []
         
         if update.message.text:
-            context.user_data["report_messages"].append(f"• {update.message.text}")
+            context.user_data["report_messages"].append(f"â€¢ {update.message.text}")
         elif update.message.caption:
-            context.user_data["report_messages"].append(f"• [Media] {update.message.caption}")
+            context.user_data["report_messages"].append(f"â€¢ [Media] {update.message.caption}")
         else:
-            context.user_data["report_messages"].append("• [Media tanpa caption]")
+            context.user_data["report_messages"].append("â€¢ [Media tanpa caption]")
 
         old_msg_id = context.user_data.get("last_report_msg_id")
         if old_msg_id:
@@ -130,7 +130,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         keyboard = [[InlineKeyboardButton("Submit", callback_data="submit_report")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        sent_msg = await update.message.reply_text("📥 Laporan di terima", reply_markup=reply_markup)
+        sent_msg = await update.message.reply_text("ðŸ“¥ Laporan di terima", reply_markup=reply_markup)
         context.user_data["last_report_msg_id"] = sent_msg.message_id
         return
 
@@ -178,11 +178,11 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     if query.data == "trade_guard":
         trade_guard_text = (
-            f"<i>Hi!</i> 👋 {user_name} untuk menggunakan Trade Guard silahkan hubungi admin di bawah ini\n\n"
+            f"<i>Hi!</i> ðŸ‘‹ {user_name} untuk menggunakan Trade Guard silahkan hubungi admin di bawah ini\n\n"
             "@spcydick\n"
             "@fallinlauvy\n\n"
             "<blockquote>"
-            "🧢 | <b>Safety Steps</b> ✨\n"
+            "ðŸ§¢ | <b>Safety Steps</b> âœ¨\n"
             "Pastikan sebelum transaksi menggunakan rekber untuk cek username admin di atas, dan berhati-hati lah terhadap akun palsu!"
             "</blockquote>"
         )
@@ -191,7 +191,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data == "report_scammer":
         context.user_data["awaiting_report"] = True
         report_scammer_text = (
-            f"<i>Hi!</i> 👋 {user_name} silakan kirimkan username pelaku beserta bukti foto/screenshot di bawah ini untuk kami tindak lanjuti segera."
+            f"<i>Hi!</i> ðŸ‘‹ {user_name} silakan kirimkan username pelaku beserta bukti foto/screenshot di bawah ini untuk kami tindak lanjuti segera."
         )
         await query.message.reply_text(report_scammer_text, parse_mode="HTML")
 
@@ -202,7 +202,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         report_content = context.user_data.pop("report_messages", [])
         if report_content and REPORT_GROUP_ID:
             user = update.effective_user
-            header = f"🚨 <b>LAPORAN SCAM BARU</b>\n\n"
+            header = f"ðŸš¨ <b>LAPORAN SCAM BARU</b>\n\n"
             header += f"<b>Dari:</b> {user.mention_html()} (<code>{user.id}</code>)\n"
             header += f"<b>Isi Laporan:</b>\n\n"
             full_report = header + "\n".join(report_content)
@@ -231,9 +231,18 @@ application.add_handler(MessageHandler(filters.TEXT | filters.PHOTO | filters.VI
 @app.route('/api/webhook', methods=['POST'])
 async def webhook():
     if request.method == "POST":
-        update = Update.de_json(request.get_json(force=True), application.bot)
-        await application.update_queue.put(update)
-        return "OK", 200
+        try:
+            update_data = request.get_json(force=True)
+            logging.info(f"Webhook received update: {update_data}")
+            update = Update.de_json(update_data, application.bot)
+            
+            # Use background task to handle update
+            asyncio.create_task(application.process_update(update))
+            
+            return "OK", 200
+        except Exception as e:
+            logging.error(f"Error processing webhook: {e}")
+            return "Error", 500
     return "Method not allowed", 405
 
 @app.route('/')
