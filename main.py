@@ -234,10 +234,13 @@ async def webhook():
         try:
             update_data = request.get_json(force=True)
             logging.info(f"Webhook received update: {update_data}")
-            update = Update.de_json(update_data, application.bot)
             
-            # Use background task to handle update
-            asyncio.create_task(application.process_update(update))
+            # Initialize application if not already initialized
+            if not application.running:
+                await application.initialize()
+            
+            update = Update.de_json(update_data, application.bot)
+            await application.process_update(update)
             
             return "OK", 200
         except Exception as e:
