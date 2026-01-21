@@ -1,0 +1,14 @@
+{
+  "message_text": "Disarankan selalu gunakan Trade Guard untuk menjaga keamanan transaksi mu",
+  "buttons": [
+    {
+      "text": "Trade Guard",
+      "url": "https://t.me/guardness_bot?start"
+
+    },
+    {
+      "text": "Report Scammer",
+      "url": "https://t.me/guardness_bot?start"
+    }
+  ]
+}
