@@ -2,8 +2,7 @@ import os
 import json
 import logging
 from flask import Flask, request
-from dotenv import load_dotenv
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, Bot
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -16,15 +15,14 @@ from telegram.ext import (
 # =====================
 # LOAD ENV
 # =====================
-load_dotenv()
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-DISCUSSION_GROUP_ID = os.getenv("DISCUSSION_GROUP_ID")
-REPORT_GROUP_ID = os.getenv("REPORT_GROUP_ID")
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
+DISCUSSION_GROUP_ID = os.environ.get("DISCUSSION_GROUP_ID")
+REPORT_GROUP_ID = os.environ.get("REPORT_GROUP_ID")
 
 # =====================
 # LOAD CONFIG
 # =====================
-with open("config.json", "r", encoding="utf-8") as f:
+with open("config.py", "r", encoding="utf-8") as f:
     CONFIG = json.load(f)
 
 MESSAGE_TEXT = CONFIG["message_text"]
@@ -39,13 +37,11 @@ logging.basicConfig(
 )
 
 app = Flask(__name__)
-# Initialize Bot and Application without starting polling
 application = Application.builder().token(BOT_TOKEN).build()
 
 # =====================
 # HANDLERS
 # =====================
-
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_chat.type != "private":
         return
@@ -56,11 +52,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         if param == "trade_guard":
             trade_guard_text = (
-                f"<i>Hi!</i> ðŸ‘‹ {user_name} untuk menggunakan Trade Guard silahkan hubungi admin di bawah ini\n\n"
+                f"<i>Hi!</i> 👋 {user_name} untuk menggunakan Trade Guard silahkan hubungi admin di bawah ini\n\n"
                 "@spcydick\n"
                 "@fallinlauvy\n\n"
                 "<blockquote>"
-                "ðŸ§¢ | <b>Safety Steps</b> âœ¨\n"
+                "🛣 | <b>Safety Steps</b> ✨\n"
                 "Pastikan sebelum transaksi menggunakan rekber untuk cek username admin di atas, dan berhati-hati lah terhadap akun palsu!"
                 "</blockquote>"
             )
@@ -70,19 +66,18 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         elif param == "report_scammer":
             context.user_data["awaiting_report"] = True
             report_scammer_text = (
-                f"<i>Hi!</i> ðŸ‘‹ {user_name} silakan kirimkan username pelaku beserta bukti foto/screenshot di bawah ini untuk kami tindak lanjuti segera."
+                f"<i>Hi!</i> 👋 {user_name} silakan kirimkan username pelaku beserta bukti foto/screenshot di bawah ini untuk kami tindak lanjuti segera."
             )
             await update.message.reply_text(report_scammer_text, parse_mode="HTML")
             return
 
-    # Create keyboard from config
     keyboard = []
     try:
         bot_info = await context.bot.get_me()
         bot_username = bot_info.username
     except Exception:
-        bot_username = "bot_username"  # Fallback
-        
+        bot_username = "bot_username"
+
     for btn in BUTTONS:
         if btn["text"] == "Trade Guard":
             url = f"https://t.me/{bot_username}?start=trade_guard"
@@ -92,7 +87,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             keyboard.append([InlineKeyboardButton(btn["text"], url=url)])
         else:
             keyboard.append([InlineKeyboardButton(btn["text"], url=btn["url"])])
-        
+
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     await context.bot.send_photo(
@@ -100,7 +95,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         photo="https://i.postimg.cc/3wdBs6LJ/Asset-2xxxhdpi.png",
         caption=(
             "<blockquote>"
-            "<b>Pusat Pengaduan &amp; Layanan Transaksi Resmi</b>\n\n"
+            "<b>Pusat Pengaduan & Layanan Transaksi Resmi</b>\n\n"
             "Kami berkomitmen menciptakan lingkungan transaksi yang "
             "transparan dan bebas dari penipuan."
             "</blockquote>"
@@ -110,16 +105,17 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # Private chat report handling
     if update.effective_chat.type == "private" and context.user_data.get("awaiting_report"):
         if "report_messages" not in context.user_data:
             context.user_data["report_messages"] = []
         
         if update.message.text:
-            context.user_data["report_messages"].append(f"â€¢ {update.message.text}")
+            context.user_data["report_messages"].append(f"• {update.message.text}")
         elif update.message.caption:
-            context.user_data["report_messages"].append(f"â€¢ [Media] {update.message.caption}")
+            context.user_data["report_messages"].append(f"• [Media] {update.message.caption}")
         else:
-            context.user_data["report_messages"].append("â€¢ [Media tanpa caption]")
+            context.user_data["report_messages"].append("• [Media tanpa caption]")
 
         old_msg_id = context.user_data.get("last_report_msg_id")
         if old_msg_id:
@@ -130,24 +126,24 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         keyboard = [[InlineKeyboardButton("Submit", callback_data="submit_report")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        sent_msg = await update.message.reply_text("ðŸ“¥ Laporan di terima", reply_markup=reply_markup)
+        sent_msg = await update.message.reply_text("📝 Laporan di terima", reply_markup=reply_markup)
         context.user_data["last_report_msg_id"] = sent_msg.message_id
         return
 
+    # Group chat handling
     if str(update.effective_chat.id) != DISCUSSION_GROUP_ID:
         return
 
     if not update.message.is_automatic_forward and not update.message.forward_from_chat:
         return
 
-    # Create keyboard from config
     keyboard = []
     try:
         bot_info = await context.bot.get_me()
         bot_username = bot_info.username
     except Exception:
-        bot_username = "bot_username"  # Fallback
-        
+        bot_username = "bot_username"
+
     for btn in BUTTONS:
         if btn["text"] == "Trade Guard":
             url = f"https://t.me/{bot_username}?start=trade_guard"
@@ -157,7 +153,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             keyboard.append([InlineKeyboardButton(btn["text"], url=url)])
         else:
             keyboard.append([InlineKeyboardButton(btn["text"], url=btn["url"])])
-        
+
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     try:
@@ -178,11 +174,11 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     if query.data == "trade_guard":
         trade_guard_text = (
-            f"<i>Hi!</i> ðŸ‘‹ {user_name} untuk menggunakan Trade Guard silahkan hubungi admin di bawah ini\n\n"
+            f"<i>Hi!</i> 👋 {user_name} untuk menggunakan Trade Guard silahkan hubungi admin di bawah ini\n\n"
             "@spcydick\n"
             "@fallinlauvy\n\n"
             "<blockquote>"
-            "ðŸ§¢ | <b>Safety Steps</b> âœ¨\n"
+            "🛣 | <b>Safety Steps</b> ✨\n"
             "Pastikan sebelum transaksi menggunakan rekber untuk cek username admin di atas, dan berhati-hati lah terhadap akun palsu!"
             "</blockquote>"
         )
@@ -191,7 +187,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data == "report_scammer":
         context.user_data["awaiting_report"] = True
         report_scammer_text = (
-            f"<i>Hi!</i> ðŸ‘‹ {user_name} silakan kirimkan username pelaku beserta bukti foto/screenshot di bawah ini untuk kami tindak lanjuti segera."
+            f"<i>Hi!</i> 👋 {user_name} silakan kirimkan username pelaku beserta bukti foto/screenshot di bawah ini untuk kami tindak lanjuti segera."
         )
         await query.message.reply_text(report_scammer_text, parse_mode="HTML")
 
@@ -202,7 +198,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         report_content = context.user_data.pop("report_messages", [])
         if report_content and REPORT_GROUP_ID:
             user = update.effective_user
-            header = f"ðŸš¨ <b>LAPORAN SCAM BARU</b>\n\n"
+            header = f"⚡ <b>LAPORAN SCAM BARU</b>\n\n"
             header += f"<b>Dari:</b> {user.mention_html()} (<code>{user.id}</code>)\n"
             header += f"<b>Isi Laporan:</b>\n\n"
             full_report = header + "\n".join(report_content)
@@ -221,46 +217,26 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 # =====================
-# VERCEL ENTRY POINT
+# REGISTER HANDLERS
 # =====================
-
 application.add_handler(CommandHandler("start", start))
 application.add_handler(CallbackQueryHandler(button_callback))
-application.add_handler(MessageHandler(filters.TEXT | filters.PHOTO | filters.VIDEO | filters.ATTACHMENT, handle_message))
+application.add_handler(MessageHandler(filters.ALL, handle_message))
 
+# =====================
+# VERCEL SERVERLESS ENTRY
+# =====================
 @app.route('/api/webhook', methods=['POST'])
 async def webhook():
-    if request.method == "POST":
-        try:
-            update_data = request.get_json(force=True)
-            logging.info(f"Webhook received update: {update_data}")
-            
-            # Initialize application if not already initialized
-            if not application.running:
-                await application.initialize()
-            
-            update = Update.de_json(update_data, application.bot)
-            await application.process_update(update)
-            
-            return "OK", 200
-        except Exception as e:
-            logging.error(f"Error processing webhook: {e}")
-            return "Error", 500
-    return "Method not allowed", 405
+    try:
+        update_data = request.get_json(force=True)
+        update = Update.de_json(update_data, application.bot)
+        await application.process_update(update)
+        return "OK", 200
+    except Exception as e:
+        logging.error(f"Error processing webhook: {e}")
+        return "Error", 500
 
 @app.route('/')
 def index():
     return "Bot is running!"
-
-if __name__ == "__main__":
-    # For local testing, use polling or run the flask app
-    # In Vercel, only the 'app' instance is used
-    import asyncio
-    async def run_local():
-        async with application:
-            await application.initialize()
-            await application.start()
-            await application.updater.start_polling()
-            app.run(host="0.0.0.0", port=5000)
-    
-    asyncio.run(run_local())
